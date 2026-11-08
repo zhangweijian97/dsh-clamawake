@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "ClamAwake 保活",
+    "description": "ClamAwake 合盖保活与 DSH 宿主生命周期绑定：宿主启动时挂起虚拟屏保活配方（vd-engine --hold + caffeinate -d），宿主停止时收掉自有子进程；已有 kya=yes 保活屏时复用不重建。"
+  }
+}

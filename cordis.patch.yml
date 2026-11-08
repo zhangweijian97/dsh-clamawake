@@ -1,0 +1,4 @@
+# dsh-clamawake bundle patch —— 只插宿主半边单行（本插件无 web 面板，无客户端模块）。
+- insert:
+    - id: dsh-clamawake
+      name: dsh-clamawake

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "ClamAwake Keepalive",
+    "description": "Binds the ClamAwake clamshell keepalive recipe to the DSH host lifecycle: on host start it brings up the virtual-display recipe (vd-engine --hold + caffeinate -d); on host stop it terminates only its own child processes. Reuses an existing kya=yes keepalive display instead of creating a duplicate."
+  }
+}
