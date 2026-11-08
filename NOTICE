@@ -1,0 +1,13 @@
+dsh-clamawake
+Copyright (c) 2026 zhangweijian97
+
+This package bundles the ClamAwake engine binary at bin/vd-engine.
+
+That binary is part of ClamAwake, which is licensed under the GNU General
+Public License v3.0 (GPL-3.0):
+
+  - Source: https://github.com/zhangweijian97/ClamAwake
+  - License text: https://www.gnu.org/licenses/gpl-3.0.html
+
+The plugin's own JavaScript source is MIT-licensed (see LICENSE). The bundled
+engine remains GPL-3.0; the corresponding source is available at the URL above.

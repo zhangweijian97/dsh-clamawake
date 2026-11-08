@@ -2,7 +2,7 @@
 
 把 ClamAwake 的合盖保活配方绑到 DSH 宿主生命周期上：**DSH 启动 = 保活在跑，DSH 停止 = 保活停**。没有 web 面板（无 UI 需求），纯宿主半边的后台插件。
 
-**前置条件**：macOS + 已安装 [ClamAwake](https://github.com/zhangweijian97/ClamAwake)。本仓只放插件代码，引擎（`vd-engine`）随应用提供。
+**前置条件**：macOS（Apple Silicon）。插件**自包含**——`bin/vd-engine` 随包分发，不需要单独安装 ClamAwake。
 
 保活配方两件套（与 ClamAwake 应用同一配方）：
 
@@ -29,20 +29,28 @@
 
 ## 引擎二进制怎么来
 
-插件不编译 Swift，只调用 `vd-engine` 可执行文件。**发布形态依赖已安装的 ClamAwake.app**：引擎随应用打包在 `Contents/Resources/`，插件只负责把它绑到 DSH 生命周期上。
+插件包里带 `bin/vd-engine`（arm64），装完即可用，不需要另外安装 ClamAwake。引擎来自 [ClamAwake](https://github.com/zhangweijian97/ClamAwake) 的 `src/vd-engine.swift`，按包发布版本锁定——升级引擎＝发新版插件。
 
-解析链（第一个存在且可执行的生效，全落空则插件装载报明确错误——列尝试过的路径）：
+解析链（第一个存在且可执行的生效）：
 
-1. 环境变量 `CLAMAWAKE_ENGINE`（绝对路径）；
-2. `<插件目录>/bin/vd-engine` —— **本机开发便利**：把编译产物拷进插件包（不入库，见 `.gitignore`）；
-3. `/Applications/ClamAwake.app/Contents/Resources/vd-engine` —— 已安装的应用；
-4. `~/Applications/ClamAwake.app/Contents/Resources/vd-engine` —— 用户目录安装位。
+1. 环境变量 `CLAMAWAKE_ENGINE`（绝对路径，用于本机调试或替换引擎）；
+2. `<插件目录>/bin/vd-engine` —— **随包分发的引擎**（主路径）；
+3. `/Applications/ClamAwake.app/Contents/Resources/vd-engine` 等已安装应用的兜底位（本机开发便利，非必需）。
 
-**为什么不自带二进制**：引擎是 ClamAwake 的主体，插件只是宿主适配层。二进制跟着应用走，插件仓只放代码——这样引擎升级不用重发插件，也不会出现「一份引擎、多处副本」的漂移。DSH 是 GUI 应用，从 launchd/Finder 启动不继承 shell 环境变量，所以生产环境用第 3/4 条定位。
+重新产出包内引擎（发布前必跑，禁止手工拷贝——手工拷贝是引擎漂移的来源）：
+
+```sh
+scripts/build-engine.sh            # 从兄弟仓 ../ClamAwake 的源码编译
+scripts/build-engine.sh --copy     # 从已安装的 ClamAwake.app 复制
+```
+
+## 许可证
+
+插件 JavaScript 源码为 MIT（见 `LICENSE`）。`bin/vd-engine` 属于 ClamAwake，**GPL-3.0**——对应源码在 <https://github.com/zhangweijian97/ClamAwake>（见 `NOTICE`）。
 
 ## 装载步骤（插件管理器路径已实测，见「已知边界」）
 
-1. 先装 ClamAwake（DMG 拖进「应用程序」即可，引擎随之就位）；本机开发可改用 `bin/vd-engine` 或 `CLAMAWAKE_ENGINE`。
+1. 无需预装应用——引擎在包里。
 2. 把本目录作为插件包装进 DSH，两种等价路径：
    - **界面/插件管理器**：`plugin_manager(action=install_bundle, target=<本目录绝对路径>)`（装成的是 profile 下指向本目录的 link，改代码后重新启用即可生效，无需拷贝）；
    - **文件级**（DSH 插件接入的硬约束：必须是 profile 下**实体目录** + 双登记）：把本目录拷到 `~/.dsh/profiles/<profile>/node_modules/dsh-clamawake/`，并在该 profile 的 `package.json` 里同时登记 `dependencies` 与 `dsh.profile.bundles`。手工符号链接不要用——宿主 import 会失败且只打一行「entry did not activate」；插件管理器的 link 依赖不同，已实测可用。
@@ -56,7 +64,10 @@
 
 | 文件 | 作用 |
 |---|---|
-| `index.js` | 宿主半边：start/dispose 生命周期、引擎解析、复用防护、交叉核验。无 npm 依赖（`node:child_process`，数组参数不经 shell） |
+| `index.js` | 宿主半边：start/dispose 生命周期、引擎解析、复用防护、交叉核验、崩溃重启。无 npm 依赖（`node:child_process`，数组参数不经 shell） |
+| `bin/vd-engine` | 随包分发的引擎二进制（arm64；GPL-3.0，见 `NOTICE`） |
+| `scripts/build-engine.sh` | 产出包内引擎：从 ClamAwake 源码编译，或从已安装应用复制 |
+| `NOTICE` | 引擎二进制的来源与 GPL-3.0 声明 |
 | `cordis.patch.yml` | bundle patch：插入一行 `dsh-clamawake`（仅宿主半边） |
 | `locale/zh.json` / `locale/en.json` | Plugin Manager 读的标题/描述 |
 | `test-lifecycle.mjs` | 生命周期自测（不经宿主，见下） |

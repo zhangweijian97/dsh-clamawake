@@ -215,6 +215,10 @@ try {
   console.log(`[test] 阶段 A：自建屏 id=${testScreenId} 已从在线列表消失`)
   testScreenId = null // 收尾责任已履行
 
+  // ---- 阶段 B：复用路径（默认 CLAMAWAKE_REUSE=1；基线无 kya 屏时无可复用对象，跳过） ----
+  if (baselineKya.length === 0) {
+    console.log('[test] 阶段 B 跳过：基线没有 kya=yes 屏可复用（复用路径无从验证）')
+  } else {
   // ---- 阶段 B：复用路径（默认 CLAMAWAKE_REUSE=1） ----
   delete process.env.CLAMAWAKE_REUSE
   const pluginB = await importPlugin('b')
@@ -239,6 +243,7 @@ try {
   const caffeinateB = ctxB.state.caffeinate_child
   assert(!caffeinateB || caffeinateB.exitCode !== null || caffeinateB.signalCode !== null, '阶段 B dispose 后本插件的 caffeinate 应退出')
   console.log('[test] 阶段 B dispose 完成：本插件 caffeinate 已退出，外部持有屏未触碰')
+  }
 
   // ---- 终态复核：与基线一致 ----
   const finalSet = screenSet(runList())

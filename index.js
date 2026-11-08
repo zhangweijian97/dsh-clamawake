@@ -23,9 +23,9 @@
  * 默认复用逻辑命中，test-lifecycle.mjs 用它验证「建→拆」全链路。
  *
  * 引擎二进制解析（第一个存在且可执行的生效，详见 README）：
- *   1. 环境变量 CLAMAWAKE_ENGINE（绝对路径）
- *   2. <插件目录>/bin/vd-engine        （本机开发便利：编译产物拷进插件包，不入库）
- *   3. /Applications/ClamAwake.app/Contents/Resources/vd-engine（发布形态：依赖已安装的 ClamAwake）
+ *   1. 环境变量 CLAMAWAKE_ENGINE（绝对路径；本机调试或替换引擎用）
+ *   2. <插件目录>/bin/vd-engine        （随包分发的引擎，自包含的主路径）
+ *   3. /Applications/ClamAwake.app/Contents/Resources/vd-engine（已装应用的兜底位）
  *   4. ~/Applications/ClamAwake.app/Contents/Resources/vd-engine（用户目录安装位）
  * 全部落空 → 抛明确错误：列尝试过的路径 + 引擎来源说明。
  *
@@ -88,6 +88,41 @@ function resolveEngine() {
     `${LOG}   2. 设环境变量 CLAMAWAKE_ENGINE 指向已有的 vd-engine 绝对路径（GUI 宿主需 launchctl setenv，见 README）；`,
     `${LOG}   3. 把编译产物拷进 <插件目录>/bin/vd-engine（自包含安装）。`,
   ].join('\n'))
+}
+
+/** 读引擎自报版本（vd-engine version）；旧引擎没有该子命令时降级为不可知，不阻断启动。 */
+function describeEngine(engine) {
+  let run
+  try {
+    run = spawnSync(engine, ['version'], { encoding: 'utf8', timeout: LIST_TIMEOUT_MS })
+  } catch (error) {
+    return { label: `版本读取失败（${error.message}）` }
+  }
+  if (run.error || run.status !== 0) {
+    return { label: '版本不可知（引擎没有 version 子命令，可能是旧版）' }
+  }
+  const version = /^version=(.+)$/m.exec(String(run.stdout || ''))?.[1]?.trim() ?? 'unknown'
+  const arch = /^arch=(.+)$/m.exec(String(run.stdout || ''))?.[1]?.trim() ?? 'unknown'
+  return { version, arch, label: `${version} (${arch})` }
+}
+
+/**
+ * 与包内指纹（bin/ENGINE-FINGERPRINT，构建脚本产出）比对：应用版与插件版的引擎不同步时打 warn。
+ * 只提示不阻断——版本不符时保活配方仍然可用，只是行为可能与应用版不一致。
+ */
+function checkEngineFingerprint(engine, info) {
+  const fpPath = path.join(PLUGIN_DIR, 'bin', 'ENGINE-FINGERPRINT')
+  let fp
+  try {
+    fp = fs.readFileSync(fpPath, 'utf8')
+  } catch {
+    return
+  }
+  const expected = /^version=(.+)$/m.exec(fp)?.[1]?.trim()
+  if (expected && info.version && expected !== info.version) {
+    console.warn(`${LOG} 引擎版本与包内指纹不符：包内 ${expected}，实际 ${info.version}`
+      + `（引擎被替换过，或包未按 scripts/build-engine.sh 重建）`)
+  }
 }
 
 // MARK: - 引擎只读读数
@@ -193,6 +228,9 @@ function reuseEnabled() {
 /** 插件启动：解析引擎 → 核对 caffeinate → 只读 list → 复用或建屏。同步完成 spawn，异步尾段只做确认与日志。 */
 function startKeepalive() {
   const { engine, tried } = resolveEngine()
+  const engineInfo = describeEngine(engine)
+  console.log(`${LOG} 引擎 ${engineInfo.label}：${engine}`)
+  checkEngineFingerprint(engine, engineInfo)
   if (!fs.existsSync(CAFFEINATE)) {
     throw new Error(`${LOG} ${CAFFEINATE} 不存在（配方另一半无法执行）。先跑 vd-engine doctor 核对环境。`)
   }

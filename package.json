@@ -2,7 +2,7 @@
   "name": "dsh-clamawake",
   "version": "0.1.0",
   "private": false,
-  "description": "Bind the ClamAwake lid-closed keep-alive recipe to the DeepSeek Harness host lifecycle: host start = virtual display + caffeinate -d running; host stop = its own children terminated; an existing keepalive display is reused, and a crashed engine is restarted with backoff. Requires a macOS machine with ClamAwake installed.",
+  "description": "ClamAwake keep-alive for DeepSeek Harness (macOS): binds the lid-closed keep-alive recipe (virtual display + caffeinate -d) to the host lifecycle. Self-contained — ships the engine, no separate app required. Reuses an existing keepalive display; restarts a crashed engine with backoff.",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -14,7 +14,10 @@
     "index.js",
     "cordis.patch.yml",
     "locale/*.json",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "bin/"
   ],
   "dsh": {
     "bundle": {
