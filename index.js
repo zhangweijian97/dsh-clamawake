@@ -39,7 +39,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const VERSION = '0.1.0'
+const VERSION = '0.1.1'
 const LOG = '[clamawake]'
 
 // 保活配方固定参数：常见 MacBook 内屏逻辑分辨率（1800x1169，HiDPI 像素 3600x2338）

@@ -1,6 +1,6 @@
 {
   "name": "dsh-clamawake",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "ClamAwake keep-alive for DeepSeek Harness (macOS): binds the lid-closed keep-alive recipe (virtual display + caffeinate -d) to the host lifecycle. Self-contained — ships the engine, no separate app required. Reuses an existing keepalive display; restarts a crashed engine with backoff.",
   "type": "module",
