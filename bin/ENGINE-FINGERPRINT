@@ -1,5 +1,5 @@
-version=0.3.1
+version=0.3.2
 arch=arm64
-sha256=c2e0c1afbd36a22d7b42cbd181bd625fcca3acfa4fb45f000d32515d1f75b07d
-source_commit=21f75fe
-built_at=2026-11-12T04:13:24Z
+sha256=11f778751a565000eb6eae3812b34430172a84bec5364bb1b0f78323dd70035d
+source_commit=d460631
+built_at=2026-11-12T05:58:45Z
