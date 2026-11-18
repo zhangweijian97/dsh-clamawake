@@ -43,4 +43,4 @@ DSH 宿主插件：把 ClamAwake 的保活配方绑到 DSH 生命周期——DSH
 ## 本机安装态与已知问题（2026-11-12）
 
 - `~/.dsh/profiles/desktop/node_modules/dsh-clamawake` 是一个**软链**，指向 `.../ClamAwake/dsh-plugin`——该路径已不存在，本机实际没有装载这个插件。正确安装应走 `plugin_manager install_bundle`（指向本目录），或按插件规范落到 `工具库/`；不要在 profile 里手挂研发仓软链。
-- npm：0.1.3 已发布（latest=0.1.3，2026-11-12 19:41；注册表可见性滞后约 4 分钟，`?write=true` 可立刻读到）。包内引擎 0.3.3，`source_commit=4c7113a`（= ClamAwake v0.3.3）。
+- npm：0.1.4 已发布（2026-11-18；包内引擎 0.3.4，`source_commit=c2ecaa4` = ClamAwake v0.3.4）。0.1.3（2026-11-12 19:41，引擎 0.3.3）为其前一版。
