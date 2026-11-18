@@ -36,7 +36,7 @@ DSH 宿主插件：把 ClamAwake 的保活配方绑到 DSH 生命周期——DSH
 3. `npm pack --dry-run` 核内容
 4. commit + push GitHub
 5. `script -q /tmp/pub.log npm publish`（**不要把 stdin 重定向到文件/FIFO**，见下）
-6. 从 `/tmp/pub.log` 抓 `Authenticate your account at: <url>` → `open <url>` → 用户在网页点通过（**不需要在终端按 ENTER**）
+6. 从 `/tmp/pub.log` 抓 `Authenticate your account at: <url>` → `open <url>` → 用户在网页上**点 `Authorize`（授权）** → 浏览器密码管理器弹出**通行密钥（passkey）**，再确认一次 → npm 收到授权并继续（**不需要在终端按 ENTER**）
 7. 成功输出 `+ dsh-clamawake@X.Y.Z`；注册表有分钟级延迟，`curl 'https://registry.npmjs.org/dsh-clamawake?write=true'` 轮询 `dist-tags.latest`，别因 `npm view` 404 就重发
 8. 验证要走「回下载」：`npm pack dsh-clamawake@X.Y.Z` 解包后跑 `bin/vd-engine version` 与看 `ENGINE-FINGERPRINT`
 
@@ -44,9 +44,9 @@ DSH 宿主插件：把 ClamAwake 的保活配方绑到 DSH 生命周期——DSH
 
 - **本地 token 失效有两种面孔**：`npm whoami` 报 `401 Unauthorized`；而 `npm publish` 报的是 `404 Not Found`（npm 对无权限账号隐藏包存在性）。见到 404 先查登录态，不要怀疑包名或权限配置。
 - **`script` 的 stdin 不能重定向**：`script -q log cmd < file` 会报 `tcgetattr/ioctl: Operation not supported on socket`；想给 pty 喂输入而先 `mkfifo` 再 `exec 3> fifo` 会让 shell 卡死在打开 FIFO 上（无 reader）。保持 stdin 默认即可，脚本会自己抓链接并 `open`。
-- **网页授权不依赖 ENTER**：终端提示 `Press ENTER to open in the browser...`，但浏览器点通过后 npm 会自己继续完成登录/发布。
+- **网页授权不依赖 ENTER，也不发验证码**：终端提示 `Press ENTER to open in the browser...`；真正的动作在浏览器里——页面按钮叫 **Authorize**，点完由密码管理器弹**通行密钥（passkey）**，确认后 npm 收到授权、自己继续完成登录/发布。全程没有 6 位验证码，不要让用户去找。
 
-实测序列（0.1.4）：`npm publish` 404 → `npm whoami` 401 → 网页登录（打开 login 链接）→ 发布触发二次认证（打开 auth 链接）→ 通过 → `+ dsh-clamawake@0.1.4` → 注册表约 5 分钟后 `latest=0.1.4`。
+实测序列（0.1.4）：`npm publish` 404 → `npm whoami` 401 → 网页登录（打开 login 链接，同一套 Authorize + 通行密钥确认）→ 发布触发二次认证（打开 auth 链接，再点一次 Authorize + 通行密钥）→ `+ dsh-clamawake@0.1.4` → 注册表约 5 分钟后 `latest=0.1.4`。
 
 稳定版默认发 `latest`（不带 `--tag`）；预览才用 `--tag next`。
 

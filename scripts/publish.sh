@@ -1,12 +1,13 @@
 #!/bin/bash
 # dsh-clamawake 发布脚本 — 把「发布时最容易卡住的三件事」固化掉：
 #   1) 登录态失效（npm whoami 401 / 发布 404）：自动走网页登录，并把授权链接打开；
-#   2) 二次认证（发布时要求浏览器点通过）：自动从输出里抓授权链接并 open；
+#   2) 二次认证（发布时要求浏览器授权）：自动从输出里抓授权链接并 open；
+#      页面按钮是 Authorize，点完后密码管理器弹通行密钥（passkey）确认，npm 收到授权即继续；
 #   3) 注册表延迟（发布成功但 npm view 还是旧版）：轮询 ?write=true，不因 404 重发。
 #
 # 关键坑（2026-11-18 实测）：不要给 script 重定向 stdin（< 文件 / FIFO）——script 会对非 tty
 # 报 "tcgetattr: Operation not supported"，或让打开 FIFO 的 shell 直接挂死。让 stdin 保持默认即可；
-# 网页授权通过后 npm 会自己继续，不需要在终端按 ENTER。
+# 浏览器里点 Authorize + 通行密钥确认后，npm 会自己继续，不需要在终端按 ENTER。
 #
 # 用法:
 #   scripts/publish.sh             # 完整发布（未登录会先登录）
@@ -31,7 +32,7 @@ watch_and_open() {
       local url
       url="$(grep -oE 'https://www\.npmjs\.com/(login\?next=[^ ]+|auth/cli/[0-9a-fA-F-]+)' "$logfile" 2>/dev/null | head -1 || true)"
       if [ -n "$url" ]; then
-        log "已打开浏览器授权页：$url（请在网页上点通过）"
+        log "已打开浏览器授权页：$url（网页上点 Authorize，再用通行密钥确认一次）"
         open "$url" || true
         opened=1
       fi
