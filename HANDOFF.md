@@ -16,6 +16,7 @@ DSH 宿主插件：把 ClamAwake 的保活配方绑到 DSH 生命周期——DSH
 - `bin/vd-engine` — 随包分发的引擎（GPL-3.0，来源见 `NOTICE`）。
 - `bin/ENGINE-FINGERPRINT` — 引擎来源指纹：version / arch / sha256 / source_commit / built_at。
 - `scripts/build-engine.sh` — 产包内引擎：默认从兄弟仓 `../ClamAwake` 编译，`--copy` 从已安装应用复制；同时刷新指纹。
+- `scripts/publish.sh` — 发布编排：登录态检查/网页登录、引擎指纹核对、打包预检、发布并自动打开二次认证页、轮询注册表、回下载复核（`--check` 只体检，`--login` 只登录）。
 - `test-lifecycle.mjs` — 生命周期自测（不经宿主）。
 
 ## 版本与引擎对齐
@@ -24,21 +25,31 @@ DSH 宿主插件：把 ClamAwake 的保活配方绑到 DSH 生命周期——DSH
 - 重建引擎后看 `bin/ENGINE-FINGERPRINT` 的 `source_commit` 是否等于 ClamAwake 当前 HEAD。
 - 跨通道对账靠 `vd-engine version`（应用与插件都用它比对）。
 
-## 发布到 npm（2026-11-12 实测，含认证实况）
+## 发布到 npm（2026-11-18 修订：脚本 + 三条失败经验）
+
+**一条命令**：`scripts/publish.sh`——自动做：登录态检查（失效则走网页登录并打开授权页）、引擎指纹核对、打包预检、发布并自动打开二次认证页、轮询注册表可见、从注册表回下载复核包内引擎。`--check` 只体检不发布；`--login` 只登录。
+
+手动流程（脚本不可用时的退路）：
 
 1. bump `package.json` 的 version
 2. `scripts/build-engine.sh`（引擎版本须与 ClamAwake 当期发布一致）
-3. `npm pack --dry-run` 核内容（index.js / locale / bin / README / NOTICE / LICENSE / package.json）
+3. `npm pack --dry-run` 核内容
 4. commit + push GitHub
-5. `npm publish` —— **本账号的 2FA 是浏览器授权，没有 6 位验证码**（不要问用户要 OTP）：
-   - **非交互 shell（AI 环境）里直接 `npm publish` 会被打码**：报 `EOTP` 并输出 `https://www.npmjs.com/auth/cli/***`，人无法点击；
-   - **必须用伪终端跑**：`script -q /dev/null npm publish`。它会打印明文 `Authenticate your account at: https://www.npmjs.com/auth/cli/<uuid>` 并挂起等待；
-   - 然后 `open <该 URL>`（或让用户自己点），**用户在网页上点通过**，命令自动继续完成发布；
-   - `npm login --auth-type=web` 同理走浏览器（非 TTY 下也会打印明文 URL）。
-6. 成功输出 `+ dsh-clamawake@X.Y.Z`；HTTP 上是 `PUT 401 → 网页授权 → PUT 202`。npm 会提示「Your package is being processed and may take a few minutes to become available」——**注册表可见有延迟（分钟级），不要因为 `npm view` 立刻 404 就重发**。
-7. 验证：`npm view dsh-clamawake dist-tags`（latest 应为新版本）、`npm view dsh-clamawake@X.Y.Z bin`。
+5. `script -q /tmp/pub.log npm publish`（**不要把 stdin 重定向到文件/FIFO**，见下）
+6. 从 `/tmp/pub.log` 抓 `Authenticate your account at: <url>` → `open <url>` → 用户在网页点通过（**不需要在终端按 ENTER**）
+7. 成功输出 `+ dsh-clamawake@X.Y.Z`；注册表有分钟级延迟，`curl 'https://registry.npmjs.org/dsh-clamawake?write=true'` 轮询 `dist-tags.latest`，别因 `npm view` 404 就重发
+8. 验证要走「回下载」：`npm pack dsh-clamawake@X.Y.Z` 解包后跑 `bin/vd-engine version` 与看 `ENGINE-FINGERPRINT`
+
+### 2026-11-18 失败经验（都已固化进脚本）
+
+- **本地 token 失效有两种面孔**：`npm whoami` 报 `401 Unauthorized`；而 `npm publish` 报的是 `404 Not Found`（npm 对无权限账号隐藏包存在性）。见到 404 先查登录态，不要怀疑包名或权限配置。
+- **`script` 的 stdin 不能重定向**：`script -q log cmd < file` 会报 `tcgetattr/ioctl: Operation not supported on socket`；想给 pty 喂输入而先 `mkfifo` 再 `exec 3> fifo` 会让 shell 卡死在打开 FIFO 上（无 reader）。保持 stdin 默认即可，脚本会自己抓链接并 `open`。
+- **网页授权不依赖 ENTER**：终端提示 `Press ENTER to open in the browser...`，但浏览器点通过后 npm 会自己继续完成登录/发布。
+
+实测序列（0.1.4）：`npm publish` 404 → `npm whoami` 401 → 网页登录（打开 login 链接）→ 发布触发二次认证（打开 auth 链接）→ 通过 → `+ dsh-clamawake@0.1.4` → 注册表约 5 分钟后 `latest=0.1.4`。
 
 稳定版默认发 `latest`（不带 `--tag`）；预览才用 `--tag next`。
+
 
 ## 本机安装态与已知问题（2026-11-12）
 
