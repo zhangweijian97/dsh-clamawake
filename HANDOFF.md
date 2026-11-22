@@ -25,22 +25,24 @@ DSH 宿主插件：把 ClamAwake 的保活配方绑到 DSH 生命周期——DSH
 - 重建引擎后看 `bin/ENGINE-FINGERPRINT` 的 `source_commit` 是否等于 ClamAwake 当前 HEAD。
 - 跨通道对账靠 `vd-engine version`（应用与插件都用它比对）。
 
-## 发布到 npm（2026-11-18 修订：脚本 + 三条失败经验）
+## 发布到 npm（2026-11-22 修订：npm 原生命令，publish.sh 已退役）
 
-**一条命令**：`scripts/publish.sh`——自动做：登录态检查（失效则走网页登录并打开授权页）、引擎指纹核对、打包预检、发布并自动打开二次认证页、轮询注册表可见、从注册表回下载复核包内引擎。`--check` 只体检不发布；`--login` 只登录。
+**发布 = 真终端跑 npm 原生三条**，npm 自己处理全部交互（登录开浏览器、二次认证弹窗）：
 
-手动流程（脚本不可用时的退路）：
+```sh
+npm login --auth-type=web   # 未登录才需要；浏览器点 Authorize + 通行密钥确认
+npm whoami                  # 验证登录态
+npm publish                 # 成功标志 = 终端输出 + dsh-clamawake@X.Y.Z
+```
 
-1. bump `package.json` 的 version
-2. `scripts/build-engine.sh`（引擎版本须与 ClamAwake 当期发布一致）
-3. `npm pack --dry-run` 核内容
-4. commit + push GitHub
-5. `script -q /tmp/pub.log npm publish`（**不要把 stdin 重定向到文件/FIFO**，见下）
-6. 从 `/tmp/pub.log` 抓 `Authenticate your account at: <url>` → `open <url>` → 用户在网页上**点 `Authorize`（授权）** → 浏览器密码管理器弹出**通行密钥（passkey）**，再确认一次 → npm 收到授权并继续（**不需要在终端按 ENTER**）
-7. 成功输出 `+ dsh-clamawake@X.Y.Z`；注册表有分钟级延迟，`curl 'https://registry.npmjs.org/dsh-clamawake?write=true'` 轮询 `dist-tags.latest`，别因 `npm view` 404 就重发
-8. 验证要走「回下载」：`npm pack dsh-clamawake@X.Y.Z` 解包后跑 `bin/vd-engine version` 与看 `ENGINE-FINGERPRINT`
+发前两件：`scripts/build-engine.sh`（引擎对齐主应用当期版，构建时已刷指纹）→ bump `package.json` → commit + push。
+发后核验一条（回下载）：`npm pack dsh-clamawake@X.Y.Z` 解包跑 `bin/vd-engine version`、看 `ENGINE-FINGERPRINT`。注册表可见性有 >3 分钟延迟——**成功判据 = 终端的 `+ dsh-clamawake@…` 输出**，注册表读数只作延迟复核。
 
-### 2026-11-18 失败经验（都已固化进脚本）
+### publish.sh 退役记（2026-11-22）
+
+脚本 2026-11-18 建，动机是把当时 AI 代跑发布踩的三个坑固化下来；2026-11-22 发 0.1.5 时在 otty 终端崩溃（pty 包装层），用户以 npm 原生三条一次成功。复盘定论：那三个坑是「AI 非交互终端代跑」的环境局限，不是发布的固有复杂度——npm 原生已把交互处理干净，脚本包装层（pty、日志监视、自动开页）是替 npm 做它已会做的事，且自身引入新坑。退役（git 历史可考），教训：**固化坑之前先问「这个坑属于流程，还是属于环境」——环境局限该修环境用法，不该固化为流程资产**。
+
+### 2026-11-18 失败经验（历史留档，AI 代跑场景仍适用）
 
 - **本地 token 失效有两种面孔**：`npm whoami` 报 `401 Unauthorized`；而 `npm publish` 报的是 `404 Not Found`（npm 对无权限账号隐藏包存在性）。见到 404 先查登录态，不要怀疑包名或权限配置。
 - **`script` 的 stdin 不能重定向**：`script -q log cmd < file` 会报 `tcgetattr/ioctl: Operation not supported on socket`；想给 pty 喂输入而先 `mkfifo` 再 `exec 3> fifo` 会让 shell 卡死在打开 FIFO 上（无 reader）。保持 stdin 默认即可，脚本会自己抓链接并 `open`。
