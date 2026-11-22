@@ -55,3 +55,9 @@ DSH 宿主插件：把 ClamAwake 的保活配方绑到 DSH 生命周期——DSH
 
 - `~/.dsh/profiles/desktop/node_modules/dsh-clamawake` 是一个**软链**，指向 `.../ClamAwake/dsh-plugin`——该路径已不存在，本机实际没有装载这个插件。正确安装应走 `plugin_manager install_bundle`（指向本目录），或按插件规范落到 `工具库/`；不要在 profile 里手挂研发仓软链。
 - npm：0.1.4 已发布（2026-11-18；包内引擎 0.3.4，`source_commit=c2ecaa4` = ClamAwake v0.3.4）。0.1.3（2026-11-12 19:41，引擎 0.3.3）为其前一版。
+
+## 0.1.5 发版（2026-11-22；包内引擎对齐 ClamAwake v0.3.7）
+
+- 包内引擎 version=0.3.7 / source_commit=08687b6（= ClamAwake HEAD，含发版 docs commit）；回下载复核通过（注册表包 sha256 与本地构建一致）。
+- **发布实际走 npm 原生命令**（`npm login --auth-type=web` → `npm whoami` → `npm publish`，二次认证浏览器 Authorize + 通行密钥）：publish.sh 的 script 包装层在 otty 终端下崩溃（现象：watch_and_open 报 `url…: unbound variable` 已修一处 `${url}` 定界，但修复后仍有崩溃，根因未查明——下次发版先试脚本，崩了直接用原生三条，不再排查阻塞发布）。
+- **npm 注册表延迟实测 >3 分钟**（0.1.5 发布成功后 versions/dist-tags 迟迟不刷）：发布成功的即时判据=终端 `+ dsh-clamawake@X.Y.Z` 输出；注册表读数只作延迟后复核，不作即时判据（本次误判教训：拿延迟读数否定了用户终端的成功输出）。

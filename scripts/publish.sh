@@ -32,7 +32,7 @@ watch_and_open() {
       local url
       url="$(grep -oE 'https://www\.npmjs\.com/(login\?next=[^ ]+|auth/cli/[0-9a-fA-F-]+)' "$logfile" 2>/dev/null | head -1 || true)"
       if [ -n "$url" ]; then
-        log "已打开浏览器授权页：$url（网页上点 Authorize，再用通行密钥确认一次）"
+        log "已打开浏览器授权页：${url}（网页上点 Authorize，再用通行密钥确认一次）"
         open "$url" || true
         opened=1
       fi
